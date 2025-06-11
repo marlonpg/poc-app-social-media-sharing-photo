@@ -25,3 +25,12 @@ mvn liquibase:update
 #rollback changes
 mvn liquibase:rollback -Dliquibase.rollbackCount=1
 ```
+
+
+## Test data
+```SQL
+-- test user
+INSERT INTO APP_USER VALUES ('b0262dad-0398-4762-aba0-1dc64a68dfc3', 'UserTest', 'email@email.com', 'my_avatar_location','blablabla');
+
+
+```

@@ -20,6 +20,9 @@ public class Photo {
     private PrivacyType privacy;
 
     @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "name", column = @Column(name = "location_name"))
+    })
     private Location location;
 
     @ManyToOne
