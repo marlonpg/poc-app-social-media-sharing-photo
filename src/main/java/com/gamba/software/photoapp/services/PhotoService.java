@@ -47,7 +47,7 @@ public class PhotoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Photo", "id", photoId));
     }
 
-    public PhotoResponse uploadPhoto(UUID userId, String caption, String imageUrl, PrivacyType privacy) {
+    public PhotoResponse publishPhoto(UUID userId, String caption, String imageUrl, PrivacyType privacy) {
         AppUser user = appUserRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 

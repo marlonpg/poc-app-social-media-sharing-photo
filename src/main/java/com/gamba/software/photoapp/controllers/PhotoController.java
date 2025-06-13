@@ -21,9 +21,9 @@ public class PhotoController {
         this.photoService = photoService;
     }
 
-    @PostMapping
-    public ResponseEntity<PhotoResponse> uploadPhoto(@RequestBody PhotoUploadRequest request) {
-        PhotoResponse photo = photoService.uploadPhoto(request.userId(), request.caption(), request.imageUrl(), request.privacy());
+    @PostMapping("/publish")
+    public ResponseEntity<PhotoResponse> publishPhoto(@RequestBody PhotoUploadRequest request, @AuthenticationPrincipal UserDetails userDetails) {
+        PhotoResponse photo = photoService.publishPhoto(request.userId(), request.caption(), request.imageUrl(), request.privacy());
 
         return ResponseEntity.ok(photo);
     }
