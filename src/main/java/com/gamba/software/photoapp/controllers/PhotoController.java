@@ -7,6 +7,8 @@ import com.gamba.software.photoapp.repositories.models.Interaction;
 import com.gamba.software.photoapp.repositories.models.Photo;
 import com.gamba.software.photoapp.services.PhotoService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;

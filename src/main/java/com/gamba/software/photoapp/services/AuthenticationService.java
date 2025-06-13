@@ -1,50 +1,69 @@
 package com.gamba.software.photoapp.services;
 
+import com.gamba.software.photoapp.configs.JwtAuthenticationProvider;
+import com.gamba.software.photoapp.controllers.dto.AuthenticationRequest;
+import com.gamba.software.photoapp.controllers.dto.AuthenticationResponse;
+import com.gamba.software.photoapp.controllers.dto.RegisterRequest;
+import com.gamba.software.photoapp.exceptions.ResourceAlreadyExistsException;
+import com.gamba.software.photoapp.repositories.AppUserRepository;
+import com.gamba.software.photoapp.repositories.models.AppUser;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
+
 @Service
-@RequiredArgsConstructor
 public class AuthenticationService {
 
-    private final UserRepository userRepository;
+    private final AppUserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
-    private final AuthenticationManager authenticationManager;
+    private final JwtAuthenticationProvider jwtAuthenticationProvider;
+
+    public AuthenticationService(AppUserRepository appUserRepository, PasswordEncoder passwordEncoder, JwtService jwtService, JwtAuthenticationProvider jwtAuthenticationProvider) {
+        this.appUserRepository = appUserRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
+        this.jwtAuthenticationProvider = jwtAuthenticationProvider;
+    }
 
     public AuthenticationResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new EmailAlreadyExistsException(request.getEmail());
+        if (!appUserRepository.findByEmail(request.email()).isEmpty()) {
+            throw new ResourceAlreadyExistsException("AppUser", "email", request.email());
         }
+        AppUser appUser = new AppUser();
+        appUser.setEmail(request.email());
+        appUser.setUsername(request.username());
+        appUser.setPassword(passwordEncoder.encode(request.password()));
 
-        var user = AppUser.builder()
-                .username(request.getUsername())
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .build();
-
-        userRepository.save(user);
-
-        var jwtToken = jwtService.generateToken(user);
-        return AuthenticationResponse.builder()
-                .token(jwtToken)
-                .build();
+        appUser = appUserRepository.save(appUser);
+        UserDetails userDetails = new org.springframework.security.core.userdetails.User(
+                appUser.getEmail(),
+                appUser.getPassword(),
+                Collections.emptyList()
+        );
+        var jwtToken = jwtService.generateToken(userDetails);
+        return new AuthenticationResponse(jwtToken);
     }
 
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
-        authenticationManager.authenticate(
+        jwtAuthenticationProvider.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
+                        request.email(),
+                        request.password()
                 )
         );
 
-        var user = userRepository.findByEmail(request.getEmail())
+        var appUser = appUserRepository.findByEmail(request.email())
                 .orElseThrow();
-
-        var jwtToken = jwtService.generateToken(user);
-        return AuthenticationResponse.builder()
-                .token(jwtToken)
-                .build();
+        UserDetails userDetails = new org.springframework.security.core.userdetails.User(
+                appUser.getEmail(),
+                appUser.getPassword(),
+                Collections.emptyList()
+        );
+        var jwtToken = jwtService.generateToken(userDetails);
+        return new AuthenticationResponse(jwtToken);
     }
 }
