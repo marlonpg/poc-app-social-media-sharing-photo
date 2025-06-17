@@ -2,12 +2,17 @@ package com.gamba.software.photoapp.configs;
 
 import com.gamba.software.photoapp.repositories.AppUserRepository;
 import com.gamba.software.photoapp.repositories.models.AppUser;
+import com.gamba.software.photoapp.repositories.models.Role;
 import org.springframework.context.annotation.Bean;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class UserDetailsConfig {
@@ -24,10 +29,14 @@ public class UserDetailsConfig {
             AppUser user = appUserRepository.findByEmail(email)
                     .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + email));
 
+            List<GrantedAuthority> authorities = user.getRoles().stream()
+                    .map(role -> new SimpleGrantedAuthority(role.getName()))
+                    .collect(Collectors.toList());
+
             return new org.springframework.security.core.userdetails.User(
                     user.getEmail(),
                     user.getPassword(),
-                    Collections.emptyList()
+                    authorities
             );
         };
     }
