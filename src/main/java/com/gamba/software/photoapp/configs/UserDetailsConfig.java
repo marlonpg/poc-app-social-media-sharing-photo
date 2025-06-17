@@ -20,13 +20,13 @@ public class UserDetailsConfig {
     // Bean for User Details Service
     @Bean
     public UserDetailsService userDetailsService() {
-        return username -> {
-            AppUser user = appUserRepository.findByUsername(username)
-                    .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
+        return email -> {
+            AppUser user = appUserRepository.findByEmail(email)
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + email));
 
             return new org.springframework.security.core.userdetails.User(
-                    user.getUsername(),
-                    user.getPassword(), // Password here is the HASHED password from the DB
+                    user.getEmail(),
+                    user.getPassword(),
                     Collections.emptyList()
             );
         };

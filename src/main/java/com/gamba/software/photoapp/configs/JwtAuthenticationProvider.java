@@ -24,6 +24,13 @@ public class JwtAuthenticationProvider implements AuthenticationProvider {
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
         final String jwt = (String) authentication.getCredentials();
+
+        if (jwt == null || jwt.isBlank()) {
+            throw new JwtAuthenticationException("Empty or null JWT");
+        }
+        if (!jwt.contains(".")) {
+            throw new JwtAuthenticationException("Malformed JWT: Missing parts");
+        }
         final String username = jwtService.extractUsername(jwt);
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
@@ -37,6 +44,7 @@ public class JwtAuthenticationProvider implements AuthenticationProvider {
         }
         throw new JwtAuthenticationException("Invalid JWT token");
     }
+
 
     @Override
     public boolean supports(Class<?> authentication) {

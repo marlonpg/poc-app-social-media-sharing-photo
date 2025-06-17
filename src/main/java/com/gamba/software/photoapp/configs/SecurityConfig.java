@@ -31,7 +31,8 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**",
+                                "/api/v1/photos/upload").permitAll()
                         .requestMatchers("/api/v1/photos/upload").permitAll() // Allow upload without auth
                         .anyRequest().authenticated()
                 )
