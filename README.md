@@ -4,6 +4,10 @@
 - Build a Social Media Sharing Photo App (publish photos, tag photos, timeline, comments)
 
 
+## TODOs:
+- split service into two different services, auth-service and photo-service.
+- update diagram
+- create new service structures
 
 ## Diagram
 ![Diagram](deepseek_mermaid_20250604_046c27.png)
