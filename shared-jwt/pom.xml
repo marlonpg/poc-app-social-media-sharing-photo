@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        No parent like spring-boot-starter-parent for a shared library,
+        unless it's a common company parent. Manage versions directly or via properties.
+        Alternatively, can use spring-boot-dependencies as a BOM for versions.
+    -->
+
+    <groupId>com.gamba.software.photoapp</groupId>
+    <artifactId>shared-jwt</artifactId>
+    <version>0.0.1-SNAPSHOT</version> <!-- Match parent project version strategy -->
+    <name>shared-jwt</name>
+    <description>Shared JWT Library</description>
+
+    <properties>
+        <java.version>21</java.version>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <jjwt.version>0.11.5</jjwt.version>
+        <spring.security.version>6.3.1</spring.security.version> <!-- Check compatible Spring Security version -->
+        <spring.framework.version>6.1.10</spring.framework.version> <!-- For spring-beans, spring-context -->
+    </properties>
+
+    <dependencies>
+        <!-- JWT Libraries -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>${jjwt.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope> <!-- Typically runtime for implementation -->
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope> <!-- Typically runtime for JSON processing -->
+        </dependency>
+
+        <!-- Spring Security Core for UserDetails (if JwtService methods use it directly) -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-core</artifactId>
+            <version>${spring.security.version}</version>
+        </dependency>
+
+        <!-- Spring Beans for @Value -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-beans</artifactId>
+            <version>${spring.framework.version}</version>
+        </dependency>
+
+        <!-- Spring Context for @Service (if keeping it as a Spring component) -->
+        <!-- If not a @Service, this can be removed, and JwtService instantiated manually -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>${spring.framework.version}</version>
+        </dependency>
+    </dependencies>
+
+    <!-- No Spring Boot Maven Plugin as this is a library -->
+</project>
