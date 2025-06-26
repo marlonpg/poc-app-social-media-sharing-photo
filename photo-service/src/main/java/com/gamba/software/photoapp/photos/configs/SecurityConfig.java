@@ -11,8 +11,8 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.password.PasswordEncoder; // For DaoAuthenticationProvider, though not strictly used with JWT directly
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder; // Example encoder
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -21,8 +21,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
-    private final UserDetailsService photoUserDetailsService; // Injected: PhotoUserDetailsService
+    private final UserDetailsService photoUserDetailsService;
 
+    // Constructor updated to remove JwtService, PhotoUserDetailsService is still needed for the provider
     public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter,
                           @Qualifier("photoUserDetailsService") UserDetailsService photoUserDetailsService) {
         this.jwtAuthFilter = jwtAuthFilter;
@@ -34,16 +35,11 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // Example: Allow public access to GET photos, but require auth for POST/PUT/DELETE
-                        // .requestMatchers(HttpMethod.GET, "/api/v1/photos/**").permitAll()
-                        // .requestMatchers("/api/v1/photos/upload").authenticated() // Specific example from auth-service
-                        .requestMatchers("/api/v1/photos/**").authenticated() // General rule for photos
-                        .anyRequest().authenticated() // Default deny for anything else
+                        .requestMatchers("/api/v1/photos/**").authenticated()
+                        .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // The AuthenticationProvider will be automatically configured if UserDetailsService is present
-                // Or we can define one explicitly:
-                .authenticationProvider(authenticationProvider())
+                .authenticationProvider(authenticationProvider()) // Keep the custom provider
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -53,15 +49,17 @@ public class SecurityConfig {
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
         authProvider.setUserDetailsService(photoUserDetailsService);
-        // PasswordEncoder is required by DaoAuthenticationProvider, even if we don't check passwords for JWTs.
-        // The password from UserDetails stub is empty, so this won't be used for matching.
+        // PasswordEncoder is required by DaoAuthenticationProvider.
+        // Even though photo-service doesn't validate passwords, the provider needs one.
+        // The User objects returned by PhotoUserDetailsService have an empty password string,
+        // so no actual password comparison will occur here.
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        // Used by DaoAuthenticationProvider. Not directly for JWT validation itself.
+        // This bean is still required by DaoAuthenticationProvider.
         return new BCryptPasswordEncoder();
     }
 }

@@ -1,17 +1,14 @@
 package com.gamba.software.photoapp.photos.filters;
 
-import com.gamba.software.photoapp.shared.jwt.JwtService; // Corrected import
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.security.SignatureException;
+// Removed import com.gamba.software.photoapp.shared.jwt.JwtService;
+// Removed JWT specific exception imports as validation is delegated
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier; // For UserDetailsService
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -29,12 +26,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
-    private final JwtService jwtService; // Will be photo-service's JwtService
+    // Removed JwtService
     private final UserDetailsService userDetailsService; // Will be photo-service's PhotoUserDetailsService
 
-    // Updated constructor to inject photo-service specific UserDetailsService
-    public JwtAuthenticationFilter(JwtService jwtService, @Qualifier("photoUserDetailsService") UserDetailsService userDetailsService) {
-        this.jwtService = jwtService;
+    public JwtAuthenticationFilter(@Qualifier("photoUserDetailsService") UserDetailsService userDetailsService) {
+        // Removed JwtService from constructor
         this.userDetailsService = userDetailsService;
     }
 
@@ -44,10 +40,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
-        final String userEmail;
-
-        // Removed path skipping logic for /api/v1/auth/** as it's not relevant for photo-service
-        // The filter will now attempt to validate a token on all paths it is applied to.
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
@@ -57,38 +49,41 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         jwt = authHeader.substring(7);
 
         try {
-            userEmail = jwtService.extractUsername(jwt);
+            // The PhotoUserDetailsService is now responsible for validating the token (jwt string)
+            // and returning UserDetails if successful.
+            // It internally calls the auth-service.
+            // If SecurityContextHolder.getContext().getAuthentication() is already set,
+            // it means a previous filter in the chain (or a cached security context)
+            // has already authenticated the user for this request.
+            // We should only proceed if there's no existing authentication.
+            if (SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = this.userDetailsService.loadUserByUsername(jwt); // Pass the token itself
 
-            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
-
-                if (jwtService.isTokenValid(jwt, userDetails)) {
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            userDetails,
-                            null,
-                            userDetails.getAuthorities()
-                    );
-                    authToken.setDetails(
-                            new WebAuthenticationDetailsSource().buildDetails(request)
-                    );
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
-                    logger.info("Successfully authenticated user (in photo-service): {}", userEmail);
-                } else {
-                    logger.warn("Invalid JWT token for user (in photo-service): {}. Token validation returned false.", userEmail);
-                }
+                // If loadUserByUsername returns (i.e., doesn't throw UsernameNotFoundException),
+                // it means auth-service considered the token valid and returned user details.
+                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                        userDetails,
+                        null, // Credentials not needed as token is validated by auth-service
+                        userDetails.getAuthorities()
+                );
+                authToken.setDetails(
+                        new WebAuthenticationDetailsSource().buildDetails(request)
+                );
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+                logger.info("Successfully authenticated user (via auth-service): {}", userDetails.getUsername());
             }
-        } catch (MalformedJwtException e) {
-            logger.warn("JWT token processing failed (in photo-service): Malformed JWT. Token: [{}], Error: {}", jwt, e.getMessage());
-        } catch (ExpiredJwtException e) {
-            logger.warn("JWT token processing failed (in photo-service): Expired JWT. Token: [{}], User: [{}], Error: {}", jwt, e.getClaims().getSubject(), e.getMessage());
-        } catch (SignatureException e) {
-            logger.warn("JWT token processing failed (in photo-service): Invalid Signature. Token: [{}], Error: {}", jwt, e.getMessage());
-        } catch (JwtException e) {
-            logger.warn("JWT token processing failed (in photo-service): Generic JWT Exception. Token: [{}], Error: {}", jwt, e.getMessage());
         } catch (UsernameNotFoundException e) {
-            logger.warn("JWT token processing failed (in photo-service): User not found by PhotoUserDetailsService. Error: {}", e.getMessage());
+            // This exception is thrown by PhotoUserDetailsService if auth-service validation fails
+            logger.warn("Token validation failed via auth-service or user not found: {}", e.getMessage());
+            // Optionally, clear context if partially set, though typically not needed here
+            // SecurityContextHolder.clearContext();
+            // Depending on requirements, you might want to send a 401 response here,
+            // but Spring Security's ExceptionTranslationFilter usually handles that
+            // if the request reaches a secured endpoint without successful authentication.
         } catch (Exception e) {
-            logger.error("Unexpected error during JWT authentication filter processing (in photo-service) for request: {}", request.getRequestURI(), e);
+            // Catch-all for any other unexpected errors during the process
+            logger.error("Unexpected error during authentication filter processing in photo-service for request: {}", request.getRequestURI(), e);
+            // SecurityContextHolder.clearContext();
         }
 
         filterChain.doFilter(request, response);
