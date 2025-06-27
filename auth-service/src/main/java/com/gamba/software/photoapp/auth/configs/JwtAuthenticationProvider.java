@@ -1,7 +1,7 @@
 package com.gamba.software.photoapp.auth.configs;
 
 import com.gamba.software.photoapp.auth.exceptions.JwtAuthenticationException;
-import com.gamba.software.photoapp.shared.jwt.JwtService; // Corrected import
+import com.gamba.software.photoapp.auth.security.AuthJwtService; // Updated import
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.SignatureException;
@@ -16,11 +16,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class JwtAuthenticationProvider implements AuthenticationProvider {
 
-    private final JwtService jwtService;
+    private final AuthJwtService jwtService; // Changed type to AuthJwtService
     private final UserDetailsService userDetailsService;
 
-    public JwtAuthenticationProvider(JwtService jwtService, UserDetailsService userDetailsService) {
-        this.jwtService = jwtService;
+    public JwtAuthenticationProvider(AuthJwtService jwtService, UserDetailsService userDetailsService) { // Changed type in constructor
+        this.jwtService = jwtService; // Changed type here
         this.userDetailsService = userDetailsService;
     }
 

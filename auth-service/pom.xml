@@ -87,13 +87,7 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-
-		<!-- Shared JWT Library -->
-		<dependency>
-			<groupId>com.gamba.software.photoapp</groupId>
-			<artifactId>shared-jwt</artifactId>
-			<version>0.0.1-SNAPSHOT</version> <!-- Ensure this matches shared-jwt version -->
-		</dependency>
+		<!-- Shared JWT Library REMOVED -->
 	</dependencies>
 
 	<build>

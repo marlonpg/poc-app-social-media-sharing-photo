@@ -1,6 +1,6 @@
 package com.gamba.software.photoapp.auth.filters;
 
-import com.gamba.software.photoapp.shared.jwt.JwtService; // Corrected import
+import com.gamba.software.photoapp.auth.security.AuthJwtService; // Updated import
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.MalformedJwtException;
@@ -28,11 +28,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
-    private final JwtService jwtService;
+    private final AuthJwtService jwtService; // Changed type to AuthJwtService
     private final UserDetailsService userDetailsService;
 
-    public JwtAuthenticationFilter(JwtService jwtService, UserDetailsService userDetailsService) {
-        this.jwtService = jwtService;
+    public JwtAuthenticationFilter(AuthJwtService jwtService, UserDetailsService userDetailsService) { // Changed type in constructor
+        this.jwtService = jwtService; // Changed type here
         this.userDetailsService = userDetailsService;
     }
 

@@ -8,7 +8,7 @@ import com.gamba.software.photoapp.auth.controllers.dto.UserValidationResponse;
 import com.gamba.software.photoapp.auth.exceptions.ResourceAlreadyExistsException;
 import com.gamba.software.photoapp.auth.repositories.AppUserRepository;
 import com.gamba.software.photoapp.auth.repositories.models.AppUser;
-import com.gamba.software.photoapp.shared.jwt.JwtService; // Added import
+import com.gamba.software.photoapp.auth.security.AuthJwtService; // Updated import
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.MalformedJwtException;
@@ -27,14 +27,14 @@ public class AuthenticationService {
 
     private final AppUserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService; // Use import, no FQN needed here now
+    private final AuthJwtService jwtService; // Changed type to AuthJwtService
     private final JwtAuthenticationProvider jwtAuthenticationProvider;
     private final UserDetailsService userDetailsService;
 
-    public AuthenticationService(AppUserRepository appUserRepository, PasswordEncoder passwordEncoder, JwtService jwtService, JwtAuthenticationProvider jwtAuthenticationProvider, UserDetailsService userDetailsService) {
+    public AuthenticationService(AppUserRepository appUserRepository, PasswordEncoder passwordEncoder, AuthJwtService jwtService, JwtAuthenticationProvider jwtAuthenticationProvider, UserDetailsService userDetailsService) { // Changed type in constructor
         this.appUserRepository = appUserRepository;
         this.passwordEncoder = passwordEncoder;
-        this.jwtService = jwtService;
+        this.jwtService = jwtService; // Changed type here
         this.jwtAuthenticationProvider = jwtAuthenticationProvider;
         this.userDetailsService = userDetailsService;
     }
