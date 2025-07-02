@@ -8,7 +8,7 @@ import com.gamba.software.photoapp.photos.repositories.models.Photo;           /
 import com.gamba.software.photoapp.photos.services.PhotoService; // Corrected
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -24,8 +24,10 @@ public class PhotoController {
     }
 
     @PostMapping("/publish")
-    public ResponseEntity<PhotoResponse> publishPhoto(@RequestBody PhotoUploadRequest request, @AuthenticationPrincipal UserDetails userDetails) {
-        PhotoResponse photo = photoService.publishPhoto(request.userId(), request.caption(), request.imageUrl(), request.privacy());
+    public ResponseEntity<PhotoResponse> publishPhoto(@RequestBody PhotoUploadRequest request, @AuthenticationPrincipal User user) {
+        // Assuming user.getUsername() returns a string representation of UUID
+        UUID userId = UUID.fromString(user.getUsername());
+        PhotoResponse photo = photoService.publishPhoto(userId, request.caption(), request.imageUrl(), request.privacy());
 
         return ResponseEntity.ok(photo);
     }

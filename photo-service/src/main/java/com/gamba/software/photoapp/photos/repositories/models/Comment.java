@@ -1,12 +1,13 @@
 package com.gamba.software.photoapp.photos.repositories.models;
 
-// Assuming a local AppUser stub or a type that will be available in this package
-import com.gamba.software.photoapp.photos.repositories.models.AppUser;    // Placeholder for AppUser
-import com.gamba.software.photoapp.photos.repositories.models.Photo;       // Corrected
+// Removed AppUser import
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
+
 
 import java.time.Instant;
 import java.util.UUID;
@@ -20,10 +21,11 @@ public class Comment {
     private String text;
     private Instant timestamp;
 
-    @ManyToOne
-    private AppUser user;
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
 
     @ManyToOne
+    @JoinColumn(name = "photo_id", nullable = false)
     private Photo photo;
 
     public UUID getId() {
@@ -50,12 +52,12 @@ public class Comment {
         this.timestamp = timestamp;
     }
 
-    public AppUser getUser() {
-        return user;
+    public UUID getUserId() {
+        return userId;
     }
 
-    public void setUser(AppUser user) {
-        this.user = user;
+    public void setUserId(UUID userId) {
+        this.userId = userId;
     }
 
     public Photo getPhoto() {
