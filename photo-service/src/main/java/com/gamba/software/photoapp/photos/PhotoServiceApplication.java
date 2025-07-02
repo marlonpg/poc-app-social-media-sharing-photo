@@ -16,11 +16,5 @@ public class PhotoServiceApplication {
         SpringApplication.run(PhotoServiceApplication.class, args);
     }
 
-    @Bean
-    public RestTemplate restTemplate(RestTemplateBuilder builder) {
-        return builder
-                .setConnectTimeout(Duration.ofSeconds(5)) // Connection timeout
-                .setReadTimeout(Duration.ofSeconds(5))    // Read timeout
-                .build();
-    }
+    // RestTemplate bean moved to SecurityConfig
 }

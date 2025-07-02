@@ -1,12 +1,7 @@
 package com.gamba.software.photoapp.photos.repositories.models;
 
 import com.gamba.software.photoapp.photos.repositories.enums.PrivacyType; // Corrected
-import com.gamba.software.photoapp.photos.repositories.models.Location;   // Corrected
-import com.gamba.software.photoapp.photos.repositories.models.Tag;        // Corrected
-import com.gamba.software.photoapp.photos.repositories.models.Comment;    // Corrected
-import com.gamba.software.photoapp.photos.repositories.models.Interaction; // Corrected
-// Assuming a local AppUser stub or a type that will be available in this package
-import com.gamba.software.photoapp.photos.repositories.models.AppUser;    // Placeholder for AppUser
+// Removed AppUser import as it's deleted
 import jakarta.persistence.*;
 
 import java.time.Instant;
@@ -31,9 +26,8 @@ public class Photo {
     })
     private Location location;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    private AppUser user;
+    @Column(name = "user_id", nullable = false) // Assuming user_id is mandatory
+    private UUID userId;
 
     @ManyToMany
     @JoinTable(
@@ -43,13 +37,10 @@ public class Photo {
     )
     private Set<Tag> tags = new HashSet<>();
 
-    @ManyToMany
-    @JoinTable(
-            name = "photo_person_tag",
-            joinColumns = @JoinColumn(name = "photo_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
-    private Set<AppUser> taggedUsers = new HashSet<>();
+    @ElementCollection(fetch = FetchType.LAZY) // Using ElementCollection for a set of UUIDs
+    @CollectionTable(name = "photo_person_tag", joinColumns = @JoinColumn(name = "photo_id"))
+    @Column(name = "user_id") // Name of the column in photo_person_tag table to store the tagged user IDs
+    private Set<UUID> taggedUserIds = new HashSet<>();
 
     @OneToMany(mappedBy = "photo", cascade = CascadeType.ALL)
     private List<Comment> comments = new ArrayList<>();
@@ -105,12 +96,12 @@ public class Photo {
         this.location = location;
     }
 
-    public AppUser getUser() {
-        return user;
+    public UUID getUserId() {
+        return userId;
     }
 
-    public void setUser(AppUser user) {
-        this.user = user;
+    public void setUserId(UUID userId) {
+        this.userId = userId;
     }
 
     public Set<Tag> getTags() {
@@ -121,12 +112,12 @@ public class Photo {
         this.tags = tags;
     }
 
-    public Set<AppUser> getTaggedUsers() {
-        return taggedUsers;
+    public Set<UUID> getTaggedUserIds() {
+        return taggedUserIds;
     }
 
-    public void setTaggedUsers(Set<AppUser> taggedUsers) {
-        this.taggedUsers = taggedUsers;
+    public void setTaggedUserIds(Set<UUID> taggedUserIds) {
+        this.taggedUserIds = taggedUserIds;
     }
 
     public List<Comment> getComments() {

@@ -16,9 +16,9 @@ public class PhotoResponseConverter {
                 photo.getPrivacy(),
                 photo.getLocation(),
                 new BasicUserResponse(
-                        photo.getUser().getId(),
-                        photo.getUser().getUsername(),
-                        photo.getUser().getAvatarUrl()
+                        photo.getUserId(), // Use userId directly
+                        null,       // Username is not directly available
+                        null        // Avatar URL is not directly available
                 )
         );
     }

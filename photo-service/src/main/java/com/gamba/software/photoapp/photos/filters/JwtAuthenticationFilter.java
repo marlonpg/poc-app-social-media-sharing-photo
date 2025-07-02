@@ -1,37 +1,49 @@
 package com.gamba.software.photoapp.photos.filters;
 
-// Removed import com.gamba.software.photoapp.shared.jwt.JwtService;
-// Removed JWT specific exception imports as validation is delegated
+// Removed JwtService and specific JWT exception imports
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.filter.OncePerRequestFilter;
+import com.gamba.software.photoapp.photos.filters.dto.AuthenticationServiceUserResponse; // Added import
+import com.gamba.software.photoapp.photos.filters.dto.TokenValidationRequest; // Added import
 
 import java.io.IOException;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+    private final RestTemplate restTemplate;
 
-    // Removed JwtService
-    private final UserDetailsService userDetailsService; // Will be photo-service's PhotoUserDetailsService
+    @Value("${auth.service.validate.url}") // Configure this in application.properties
+    private String authServiceValidateUrl;
 
-    public JwtAuthenticationFilter(@Qualifier("photoUserDetailsService") UserDetailsService userDetailsService) {
-        // Removed JwtService from constructor
-        this.userDetailsService = userDetailsService;
+
+    public JwtAuthenticationFilter(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
     }
 
     @Override
@@ -48,42 +60,54 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         jwt = authHeader.substring(7);
 
-        try {
-            // The PhotoUserDetailsService is now responsible for validating the token (jwt string)
-            // and returning UserDetails if successful.
-            // It internally calls the auth-service.
-            // If SecurityContextHolder.getContext().getAuthentication() is already set,
-            // it means a previous filter in the chain (or a cached security context)
-            // has already authenticated the user for this request.
-            // We should only proceed if there's no existing authentication.
-            if (SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = this.userDetailsService.loadUserByUsername(jwt); // Pass the token itself
+        if (SecurityContextHolder.getContext().getAuthentication() == null) {
+            try {
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                // Assuming auth-service expects a JSON with the token
+                TokenValidationRequest validationRequest = new TokenValidationRequest(jwt);
+                HttpEntity<TokenValidationRequest> entity = new HttpEntity<>(validationRequest, headers);
 
-                // If loadUserByUsername returns (i.e., doesn't throw UsernameNotFoundException),
-                // it means auth-service considered the token valid and returned user details.
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null, // Credentials not needed as token is validated by auth-service
-                        userDetails.getAuthorities()
+                //ResponseEntity<AuthenticationServiceUserResponse> authResponse = restTemplate.postForEntity(authServiceValidateUrl, entity, AuthenticationServiceUserResponse.class);
+                // Using exchange to be more explicit with method
+                 ResponseEntity<AuthenticationServiceUserResponse> authResponse = restTemplate.exchange(
+                    authServiceValidateUrl,
+                    HttpMethod.POST,
+                    entity,
+                    AuthenticationServiceUserResponse.class
                 );
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                );
-                SecurityContextHolder.getContext().setAuthentication(authToken);
-                logger.info("Successfully authenticated user (via auth-service): {}", userDetails.getUsername());
+
+
+                if (authResponse.getStatusCode().is2xxSuccessful() && authResponse.getBody() != null) {
+                    AuthenticationServiceUserResponse userResponse = authResponse.getBody();
+
+                    List<GrantedAuthority> authorities = userResponse.getAuthorities().stream()
+                            .map(SimpleGrantedAuthority::new)
+                            .collect(Collectors.toList());
+
+                    // The principal should be a UserDetails object.
+                    // PhotoController expects user.getUsername() to be a parsable UUID string.
+                    // So, userResponse.getUserId() should be this UUID string.
+                    UserDetails userDetails = new User(userResponse.getUserId(), "", authorities);
+
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            authorities
+                    );
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                    logger.info("Successfully authenticated user {} via auth-service", userResponse.getUsername());
+                } else {
+                    logger.warn("Token validation failed with status: {} from auth-service for token (ending): ...{}", authResponse.getStatusCode(), jwt.substring(Math.max(0, jwt.length() - 6)));
+                }
+            } catch (HttpClientErrorException e) {
+                logger.warn("HttpClientErrorException during token validation with auth-service for token (ending): ...{}. Status: {}, Body: {}", jwt.substring(Math.max(0, jwt.length() - 6)), e.getStatusCode(), e.getResponseBodyAsString());
+                 // Let Spring Security handle the unauthorized access by not setting authentication
+            } catch (Exception e) {
+                logger.error("Unexpected error during token validation with auth-service for token (ending): ...{}", jwt.substring(Math.max(0, jwt.length() - 6)), e);
+                // Let Spring Security handle
             }
-        } catch (UsernameNotFoundException e) {
-            // This exception is thrown by PhotoUserDetailsService if auth-service validation fails
-            logger.warn("Token validation failed via auth-service or user not found: {}", e.getMessage());
-            // Optionally, clear context if partially set, though typically not needed here
-            // SecurityContextHolder.clearContext();
-            // Depending on requirements, you might want to send a 401 response here,
-            // but Spring Security's ExceptionTranslationFilter usually handles that
-            // if the request reaches a secured endpoint without successful authentication.
-        } catch (Exception e) {
-            // Catch-all for any other unexpected errors during the process
-            logger.error("Unexpected error during authentication filter processing in photo-service for request: {}", request.getRequestURI(), e);
-            // SecurityContextHolder.clearContext();
         }
 
         filterChain.doFilter(request, response);

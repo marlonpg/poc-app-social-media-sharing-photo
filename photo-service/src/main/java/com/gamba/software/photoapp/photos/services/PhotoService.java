@@ -5,13 +5,12 @@ import com.gamba.software.photoapp.photos.converters.PhotoResponseConverter;
 import com.gamba.software.photoapp.photos.exceptions.BusinessRuleException;
 import com.gamba.software.photoapp.auth.exceptions.ResourceAlreadyExistsException; // from auth-service
 import com.gamba.software.photoapp.auth.exceptions.ResourceNotFoundException;   // from auth-service
-import com.gamba.software.photoapp.photos.repositories.AppUserRepository; // Local stub for AppUserRepository
+// Removed AppUserRepository and AppUser imports
 import com.gamba.software.photoapp.photos.repositories.InteractionRepository;
 import com.gamba.software.photoapp.photos.repositories.PhotoRepository;
 import com.gamba.software.photoapp.photos.repositories.TagRepository;
 import com.gamba.software.photoapp.photos.repositories.enums.InteractionType;
 import com.gamba.software.photoapp.photos.repositories.enums.PrivacyType;
-import com.gamba.software.photoapp.photos.repositories.models.AppUser;    // Local stub
 import com.gamba.software.photoapp.photos.repositories.models.Interaction;
 import com.gamba.software.photoapp.photos.repositories.models.Photo;
 import com.gamba.software.photoapp.photos.repositories.models.Tag;
@@ -25,18 +24,17 @@ import java.util.UUID;
 public class PhotoService {
 
     private final PhotoRepository photoRepository;
-    private final com.gamba.software.photoapp.photos.repositories.AppUserRepository appUserRepository; // Correct type for local stub repo
+    // Removed AppUserRepository
     private final TagRepository tagRepository;
     private final InteractionRepository interactionRepository;
     private final PhotoResponseConverter photoResponseConverter;
 
     public PhotoService(PhotoRepository photoRepository,
-                        AppUserRepository appUserRepository,
+                        // Removed AppUserRepository from constructor
                         TagRepository tagRepository,
                         InteractionRepository interactionRepository,
                         PhotoResponseConverter photoResponseConverter) {
         this.photoRepository = photoRepository;
-        this.appUserRepository = appUserRepository;
         this.tagRepository = tagRepository;
         this.interactionRepository = interactionRepository;
         this.photoResponseConverter = photoResponseConverter;
@@ -48,31 +46,27 @@ public class PhotoService {
     }
 
     public PhotoResponse publishPhoto(UUID userId, String caption, String imageUrl, PrivacyType privacy) {
-        AppUser user = appUserRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
-
+        // User existence is assumed to be validated by the authentication mechanism (JWT)
         Photo photo = new Photo();
         photo.setCaption(caption);
         photo.setImageUrl(imageUrl);
         photo.setPrivacy(privacy);
         photo.setUploadTime(Instant.now());
-        photo.setUser(user);
+        photo.setUserId(userId); // Set userId directly
 
         return photoResponseConverter.toResponse(photoRepository.save(photo));
     }
 
-    public Photo tagUserInPhoto(UUID photoId, UUID userId) {
+    public Photo tagUserInPhoto(UUID photoId, UUID taggedUserId) { // Renamed userId to taggedUserId for clarity
         Photo photo = photoRepository.findById(photoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Photo", "id", photoId));
 
-        AppUser user = appUserRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
-
-        if (photo.getTaggedUsers().contains(user)) {
-            throw new ResourceAlreadyExistsException("User tag", "user_id", userId);
+        // User existence of taggedUserId is an external concern, photo-service just stores the ID
+        if (photo.getTaggedUserIds().contains(taggedUserId)) {
+            throw new ResourceAlreadyExistsException("User tag", "user_id", taggedUserId);
         }
 
-        photo.getTaggedUsers().add(user);
+        photo.getTaggedUserIds().add(taggedUserId);
         return photoRepository.save(photo);
     }
 
@@ -96,15 +90,10 @@ public class PhotoService {
     }
 
     public Interaction addInteraction(UUID userId, UUID photoId, InteractionType type) {
-        Optional<AppUser> appUser = appUserRepository.findById(userId);
-        if (appUser.isEmpty()) {
-            throw new ResourceNotFoundException("User", "id", userId);
-        }
-
-        Optional<Photo> photo = photoRepository.findById(photoId);
-        if (photo.isEmpty()) {
-            throw new ResourceNotFoundException("Photo", "id", photoId);
-        }
+        // User existence (userId) is assumed validated by JWT.
+        // Photo existence check:
+        Photo photo = photoRepository.findById(photoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Photo", "id", photoId));
 
         if (interactionRepository.existsByUserIdAndPhotoIdAndType(userId, photoId, type)) {
             throw new BusinessRuleException(
@@ -114,8 +103,8 @@ public class PhotoService {
 
         Interaction interaction = new Interaction();
         interaction.setType(type);
-        interaction.setUser(appUser.get());
-        interaction.setPhoto(photo.get());
+        interaction.setUserId(userId); // Set userId directly
+        interaction.setPhoto(photo);   // Set the fetched photo object
         interaction.setTimestamp(Instant.now());
 
         return interactionRepository.save(interaction);
