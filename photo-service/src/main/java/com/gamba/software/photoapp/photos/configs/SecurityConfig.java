@@ -25,13 +25,14 @@ public class SecurityConfig {
         this.jwtAuthFilter = jwtAuthFilter;
     }
 
-    @Bean
-    public RestTemplate restTemplate(RestTemplateBuilder builder) {
-        return builder
-                .setConnectTimeout(Duration.ofSeconds(5))
-                .setReadTimeout(Duration.ofSeconds(5))
-                .build();
-    }
+    // RestTemplate bean moved to PhotoServiceApplication
+    // @Bean
+    // public RestTemplate restTemplate(RestTemplateBuilder builder) {
+    //     return builder
+    //             .setConnectTimeout(Duration.ofSeconds(5))
+    //             .setReadTimeout(Duration.ofSeconds(5))
+    //             .build();
+    // }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
