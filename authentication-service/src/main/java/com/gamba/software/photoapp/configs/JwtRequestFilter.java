@@ -32,7 +32,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
         // Skip filter for authentication and registration endpoints
         String path = request.getServletPath();
-        if (path.equals("/api/authenticate") || path.equals("/api/auth/register")) {
+        if (path.equals("/api/authenticate") || path.equals("/api/register")) {
             chain.doFilter(request, response);
             return;
         }

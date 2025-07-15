@@ -43,7 +43,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/authenticate",
-                                "/api/auth/register",
+                                "/api/register",
                                 "/api/test/public"  // Add public test endpoint
                         ).permitAll()
                         .requestMatchers("/api/test/admin").hasRole("ADMIN")  // Admin-only
